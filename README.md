@@ -10,15 +10,14 @@ These notes focus on the places where a learner can understand every word in the
 
 ## Read / 阅读
 
+- [Bilingual GitHub Pages / 中英双语网页](https://samzebrado.github.io/hf-llm-agents-companion/)
 - [中文完整笔记](notes/zh-CN.md)
 - [English notes](notes/en.md)
 - GitHub Pages source: [`docs/`](docs/)
 
-Once GitHub Pages is enabled from `main /docs`, the site will be available at:
-
-`https://samzebrado.github.io/hf-llm-agents-companion/`
-
-启用 GitHub Pages（`main` 分支的 `/docs` 目录）后，可通过上面的地址访问带中英语言切换的网页版本。
+> GitHub Pages uses the `main` branch `/docs` directory. If the site is not live yet, enable it in **Settings → Pages → Deploy from a branch → main → /docs**.
+>
+> GitHub Pages 使用 `main` 分支的 `/docs` 目录；如果网页尚未上线，可在 **Settings → Pages → Deploy from a branch → main → /docs** 中启用。
 
 ## Scope / 内容范围
 
