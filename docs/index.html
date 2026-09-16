@@ -3,95 +3,59 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Unofficial bilingual companion notes for the Hugging Face LLM and Agents courses." />
+  <meta name="description" content="Bilingual companion notes for the Hugging Face LLM and Agents courses, built from real learner questions and explanations." />
+  <meta name="color-scheme" content="light" />
   <title>HF LLM & Agents Companion</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="#top">HF LLM & Agents Companion</a>
-    <div class="actions">
-      <a class="ghost" href="https://github.com/SamZebrado/hf-llm-agents-companion" target="_blank" rel="noreferrer">GitHub</a>
-      <button id="lang-toggle" class="lang" type="button" aria-label="Switch language">EN</button>
-    </div>
+    <nav class="top-actions" aria-label="Site controls">
+      <a class="source-link" href="https://github.com/SamZebrado/hf-llm-agents-companion" target="_blank" rel="noreferrer">GitHub</a>
+      <div class="language-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="zh" class="active">中</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </nav>
   </header>
 
   <main id="top">
-    <section class="hero">
-      <p class="eyebrow" data-zh="非官方 · 学习者补充笔记" data-en="Unofficial · Learner companion">非官方 · 学习者补充笔记</p>
-      <h1 data-zh="把课程里“默认你懂”的那一层补出来。" data-en="Fill in the layer the course assumes you already know.">把课程里“默认你懂”的那一层补出来。</h1>
-      <p class="lead" data-zh="围绕 Hugging Face LLM Course 与 Agents Course，记录真实学习过程中容易卡住的概念、误解、数值例子和实践踩坑。" data-en="A bilingual companion to the Hugging Face LLM and Agents courses, built around real learner questions, misconceptions, small numerical examples, and practical pitfalls.">围绕 Hugging Face LLM Course 与 Agents Course，记录真实学习过程中容易卡住的概念、误解、数值例子和实践踩坑。</p>
-      <div class="cta-row">
-        <a class="primary" href="https://github.com/SamZebrado/hf-llm-agents-companion/blob/main/notes/zh-CN.md" id="full-notes-link" target="_blank" rel="noreferrer" data-zh="阅读完整中文笔记" data-en="Read full English notes">阅读完整中文笔记</a>
-        <a class="secondary" href="https://huggingface.co/learn/llm-course/" target="_blank" rel="noreferrer" data-zh="Hugging Face 原课程" data-en="Official Hugging Face course">Hugging Face 原课程</a>
+    <section class="intro">
+      <p class="kicker" data-zh="学习伴读 · 持续更新" data-en="Learner companion · Living notes">学习伴读 · 持续更新</p>
+      <h1 data-zh="Hugging Face LLM & Agents 学习笔记" data-en="Hugging Face LLM & Agents Companion Notes">Hugging Face LLM & Agents 学习笔记</h1>
+      <p class="intro-text" data-zh="把课程中容易一带而过、但实际学习时会卡住的问题整理下来：术语、机制、数值例子、常见误解和实践踩坑。" data-en="Notes on the parts that are easy to skim past but often become real stumbling blocks: terminology, mechanisms, small numerical examples, common misconceptions, and practical pitfalls.">把课程中容易一带而过、但实际学习时会卡住的问题整理下来：术语、机制、数值例子、常见误解和实践踩坑。</p>
+
+      <div class="purpose">
+        <h2 data-zh="这份页面怎么用" data-en="How to use these notes">这份页面怎么用</h2>
+        <p data-zh="可以从头读，也可以把这个页面或仓库交给自己的 AI / Agent，当作一份已经整理好的背景资料。遇到课程里的概念时直接问它，模型可以先从这里找到现成解释、误区和例子，再继续回答。这样即使使用较小、较便宜的模型，也能少走一些重复推理和补背景的弯路。" data-en="Read it front to back, or give this page or repository to your own AI/agent as prepared context. When a concept comes up in the course, the model can first retrieve an explanation, common misconception, or worked example from here before answering. Good context can make smaller, cheaper models much more useful for follow-up questions.">可以从头读，也可以把这个页面或仓库交给自己的 AI / Agent，当作一份已经整理好的背景资料。遇到课程里的概念时直接问它，模型可以先从这里找到现成解释、误区和例子，再继续回答。这样即使使用较小、较便宜的模型，也能少走一些重复推理和补背景的弯路。</p>
+      </div>
+
+      <div class="meta-row">
+        <a href="https://huggingface.co/learn/llm-course/" target="_blank" rel="noreferrer" data-zh="LLM Course ↗" data-en="LLM Course ↗">LLM Course ↗</a>
+        <a href="https://huggingface.co/learn/agents-course/" target="_blank" rel="noreferrer" data-zh="Agents Course ↗" data-en="Agents Course ↗">Agents Course ↗</a>
+        <span data-zh="独立学习笔记" data-en="Independent learner notes">独立学习笔记</span>
       </div>
     </section>
 
-    <section class="grid three">
-      <article class="card">
-        <span class="num">01</span>
-        <h2 data-zh="补前置知识" data-en="Bridge prerequisites">补前置知识</h2>
-        <p data-zh="batch、hidden state、logits、labels、cross-entropy、MLP、LayerNorm 等课程会直接使用的词。" data-en="Batch, hidden states, logits, labels, cross-entropy, MLP, LayerNorm, and other terms the course may use without stopping to define them.">batch、hidden state、logits、labels、cross-entropy、MLP、LayerNorm 等课程会直接使用的词。</p>
-      </article>
-      <article class="card">
-        <span class="num">02</span>
-        <h2 data-zh="拆开 Transformer" data-en="Open up the Transformer">拆开 Transformer</h2>
-        <p data-zh="从 3 tokens × 2 dimensions 的小例子走一遍 QKV、softmax、W_O、residual、Pre-Norm 与 KV cache。" data-en="Walk through QKV, softmax, W_O, residuals, Pre-Norm, and KV cache using small 3-token × 2-dimension examples.">从 3 tokens × 2 dimensions 的小例子走一遍 QKV、softmax、W_O、residual、Pre-Norm 与 KV cache。</p>
-      </article>
-      <article class="card">
-        <span class="num">03</span>
-        <h2 data-zh="记录真实误解" data-en="Capture real misconceptions">记录真实误解</h2>
-        <p data-zh="例如 V 是否就是最终输出、AV 是否已经是 hidden state、Pre-Norm 会不会抹掉 residual 的幅度差异。" data-en="For example: whether V is the final output, whether AV is already the hidden state, or whether Pre-Norm erases residual magnitude differences.">例如 V 是否就是最终输出、AV 是否已经是 hidden state、Pre-Norm 会不会抹掉 residual 的幅度差异。</p>
-      </article>
-    </section>
-
-    <section class="content-block">
-      <div class="section-heading">
-        <p class="eyebrow" data-zh="快速索引" data-en="Quick map">快速索引</p>
-        <h2 data-zh="目前覆盖的主题" data-en="Topics covered so far">目前覆盖的主题</h2>
-      </div>
-      <div class="topic-grid">
-        <div class="topic"><strong>Transformer basics</strong><span data-zh="token ID · embedding · hidden state · logits · head · batch" data-en="token ID · embedding · hidden state · logits · head · batch">token ID · embedding · hidden state · logits · head · batch</span></div>
-        <div class="topic"><strong>Attention</strong><span>Q/K/V · softmax · causal mask · W_O · KV cache</span></div>
-        <div class="topic"><strong>Architecture</strong><span data-zh="encoder-only · decoder-only · encoder-decoder · seq2seq" data-en="encoder-only · decoder-only · encoder-decoder · seq2seq">encoder-only · decoder-only · encoder-decoder · seq2seq</span></div>
-        <div class="topic"><strong>Models</strong><span>BERT · BART · T5 · ViT</span></div>
-        <div class="topic"><strong>Training</strong><span data-zh="fine-tuning · backward · optimizer · weight updates" data-en="fine-tuning · backward · optimizer · weight updates">fine-tuning · backward · optimizer · weight updates</span></div>
-        <div class="topic"><strong>Long context</strong><span>local attention · LSH · axial positional encoding</span></div>
-        <div class="topic"><strong>Systems</strong><span>model routing · MoE · MTP</span></div>
-        <div class="topic"><strong>Hugging Face</strong><span data-zh="Hub · Inference API · version pitfalls · study strategy" data-en="Hub · Inference API · version pitfalls · study strategy">Hub · Inference API · version pitfalls · study strategy</span></div>
-      </div>
-    </section>
-
-    <section class="example">
-      <div class="section-heading">
-        <p class="eyebrow" data-zh="一个代表性例子" data-en="A representative example">一个代表性例子</p>
-        <h2 data-zh="logit 到底是什么？" data-en="What exactly is a logit?">logit 到底是什么？</h2>
-      </div>
-      <div class="split">
-        <div>
-          <p data-zh="Logit 是模型对每个候选类别或 token 给出的原始分数。它还不是概率。Softmax 会把一组 logits 转成概率分布。" data-en="A logit is the model's raw score for a candidate class or token. It is not yet a probability. Softmax turns a set of logits into a probability distribution.">Logit 是模型对每个候选类别或 token 给出的原始分数。它还不是概率。Softmax 会把一组 logits 转成概率分布。</p>
-          <p data-zh="Temperature 做的事，就是在 softmax 之前重新缩放这些 logits：温度低，分布更尖；温度高，分布更平。" data-en="Temperature rescales those logits before softmax: lower temperature sharpens the distribution; higher temperature flattens it.">Temperature 做的事，就是在 softmax 之前重新缩放这些 logits：温度低，分布更尖；温度高，分布更平。</p>
+    <div class="reading-layout">
+      <aside class="toc-wrap" aria-label="Table of contents">
+        <div class="toc-sticky">
+          <div class="toc-title" data-zh="目录" data-en="Contents">目录</div>
+          <nav id="toc"></nav>
         </div>
-        <pre><code>cat  = 4.0
-dog  = 3.0
-car  = 1.0
+      </aside>
 
-p = softmax(logits / T)</code></pre>
-      </div>
-    </section>
-
-    <section class="content-block muted">
-      <div class="section-heading">
-        <p class="eyebrow" data-zh="定位" data-en="Positioning">定位</p>
-        <h2 data-zh="这不是课程翻译，也不是答案库" data-en="Not a translation, not an answer bank">这不是课程翻译，也不是答案库</h2>
-      </div>
-      <p data-zh="公开版主动移除了私人项目细节、个人日程、账号信息、本地路径和其他识别性上下文。内容以独立学习笔记与评论为主，并回链官方材料。" data-en="The public version intentionally removes private project details, schedules, account information, local paths, and other identifying context. It is independent learning commentary that links back to official sources.">公开版主动移除了私人项目细节、个人日程、账号信息、本地路径和其他识别性上下文。内容以独立学习笔记与评论为主，并回链官方材料。</p>
-    </section>
+      <article id="notes" class="notes" aria-live="polite">
+        <div class="loading" data-zh="正在加载笔记…" data-en="Loading notes…">正在加载笔记…</div>
+      </article>
+    </div>
   </main>
 
   <footer>
-    <span>HF LLM & Agents Companion</span>
-    <span data-zh="持续更新 · 非官方" data-en="Living notes · Unofficial">持续更新 · 非官方</span>
+    <div>HF LLM & Agents Companion</div>
+    <div data-zh="内容来自公开学习记录，已移除私人上下文。" data-en="Built from public-facing study notes with private context removed.">内容来自公开学习记录，已移除私人上下文。</div>
   </footer>
 
   <script src="app.js"></script>
