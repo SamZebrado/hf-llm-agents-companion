@@ -453,6 +453,186 @@ p_i = softmax(logit_i / T)
 
 ---
 
+
+## 24. Chapter 2：Tensor、矩阵乘法与 ModelOutput
+
+对应课程：[LLM Course Chapter 2 / 2](https://huggingface.co/learn/llm-course/chapter2/2)
+
+### ML 语境里的 tensor
+
+在 PyTorch / Transformers 里，可以先把 **tensor** 理解成任意维度的数值数组：
+
+- 0D：scalar
+- 1D：vector
+- 2D：matrix
+- 3D 及以上：higher-dimensional array
+
+Transformer 中常见：
+
+```text
+[batch, sequence_length, hidden_size]
+```
+
+PyTorch tensor 和 NumPy array 很像，但还带有 ML 常用能力，例如 device、dtype 和 autograd。
+
+### `return_tensors="pt"`
+
+```python
+inputs = tokenizer(
+    raw_inputs,
+    padding=True,
+    truncation=True,
+    return_tensors="pt",
+)
+```
+
+`pt` 表示 **PyTorch**。tokenizer 会把 `input_ids`、`attention_mask` 等结果直接包装成 PyTorch tensors，随后可以直接送进 PyTorch model：
+
+```python
+outputs = model(**inputs)
+```
+
+### 数学上的 tensor 为什么更严格
+
+严格数学语境里，tensor 不只是“多维数组”。它代表一个与坐标系无关的对象；换 basis 后，components 必须按照确定的 transformation law 变化。
+
+vector 是最简单的类比：`[2, 3]` 是某根几何箭头在一个 basis 下的 coordinates。换 basis 后数字会变，但 vector 本身没有变。
+
+因此，数组是 tensor 的一种 coordinate representation，不等于 tensor 本身。
+
+### 矩阵乘法：可以换括号，不能换顺序
+
+矩阵乘法满足：
+
+```text
+(AB)C = A(BC)
+```
+
+所以 `x^T T y` 可以先算 `Ty`，也可以先算 `x^T T`。
+
+但一般：
+
+```text
+AB != BA
+```
+
+例如：
+
+```text
+x^T : 1×2
+T   : 2×3
+y   : 3×1
+```
+
+右边先算：
+
+```text
+Ty:        (2×3)(3×1) -> 2×1
+x^T(Ty):  (1×2)(2×1) -> 1×1
+```
+
+左边先算：
+
+```text
+x^T T:    (1×2)(2×3) -> 1×3
+(x^T T)y: (1×3)(3×1) -> 1×1
+```
+
+### dot product 为什么是 bilinear
+
+定义：
+
+```text
+F(x, y) = x · y
+```
+
+它有两个输入槽。固定其中一个后，另一个都满足线性规则：
+
+```text
+F(a x1 + b x2, y) = a F(x1, y) + b F(x2, y)
+F(x, a y1 + b y2) = a F(x, y1) + b F(x, y2)
+```
+
+因此叫 **bi-linear**：两个输入槽分别都是 linear。
+
+### 为什么两个输入槽会带来两个坐标变换
+
+若：
+
+```text
+x = A x'
+y = B y'
+F(x,y) = x^T T y
+```
+
+代入：
+
+```text
+F = (A x')^T T (B y')
+  = x'^T A^T T B y'
+```
+
+所以新的 component matrix 是：
+
+```text
+T' = A^T T B
+```
+
+两个变换分别来自两个输入槽。只有当两边恰好使用同一个 basis change 时，才写成 `A^T T A`。
+
+### vector 和 covector
+
+一个实用直觉：
+
+- **vector**：方向和大小组成的“箭头”；
+- **covector**：输入一个 vector、输出一个 scalar 的线性测量器。
+
+例如：
+
+```text
+v = [3, 4]^T
+ω(v) = 2 v1 - v2
+ω = [2, -1]
+ω(v) = 2
+```
+
+换坐标时，vector 和 covector 的 components 使用不同 transformation rules，并互相补偿，使 `ω(v)` 这个实际测量结果不变。上标 / 下标用于标记这种不同的变换行为。
+
+### `namedtuple` 与 Hugging Face model outputs
+
+普通 tuple 只能按位置访问：
+
+```python
+x = ("cat", 0.97)
+x[0]
+x[1]
+```
+
+Python 的 `namedtuple` 给每个位置加上字段名：
+
+```python
+from collections import namedtuple
+
+Result = namedtuple("Result", ["label", "score"])
+r = Result("cat", 0.97)
+
+r[0]       # "cat"
+r.label    # "cat"
+r.score    # 0.97
+```
+
+Hugging Face model outputs 提供类似 namedtuple / dictionary 的便利接口，因此常见三种访问方式：
+
+```python
+outputs.last_hidden_state
+outputs["last_hidden_state"]
+outputs[0]
+```
+
+实际代码里优先使用 attribute 或 key，通常比 `outputs[0]` 更清楚，也不依赖字段顺序。
+
+---
+
 ## 参考
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
