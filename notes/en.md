@@ -443,6 +443,188 @@ That makes the material useful both to human learners and as RAG/context for an 
 
 ---
 
+
+## 24. Chapter 2: tensors, matrix multiplication, and ModelOutput
+
+Course section: [LLM Course Chapter 2 / 2](https://huggingface.co/learn/llm-course/chapter2/2)
+
+### Tensor in the ML sense
+
+In PyTorch / Transformers, a practical first approximation is:
+
+> a tensor is an N-dimensional numerical array.
+
+- 0D: scalar
+- 1D: vector
+- 2D: matrix
+- 3D+: higher-dimensional array
+
+A common Transformer shape is:
+
+```text
+[batch, sequence_length, hidden_size]
+```
+
+PyTorch tensors resemble NumPy arrays but also carry ML-oriented features such as device placement, dtype, and autograd.
+
+### `return_tensors="pt"`
+
+```python
+inputs = tokenizer(
+    raw_inputs,
+    padding=True,
+    truncation=True,
+    return_tensors="pt",
+)
+```
+
+`pt` means **PyTorch**. The tokenizer returns values such as `input_ids` and `attention_mask` as PyTorch tensors, ready to pass to a PyTorch model:
+
+```python
+outputs = model(**inputs)
+```
+
+### Why a mathematical tensor is stricter than an array
+
+In mathematics, a tensor is not merely an N-dimensional array. It represents an object independent of a particular coordinate system; when the basis changes, its components must transform according to a specific transformation law.
+
+A vector is the simplest analogy. `[2, 3]` can be the coordinates of one geometric arrow in one basis. After a basis change, the numbers change, but the vector itself does not.
+
+The array of components is therefore a coordinate representation of the tensor, not the tensor itself.
+
+### Matrix multiplication: regrouping is allowed, reordering is not
+
+Matrix multiplication is associative:
+
+```text
+(AB)C = A(BC)
+```
+
+So `x^T T y` may be evaluated as `x^T(Ty)` or `(x^T T)y`.
+
+But in general:
+
+```text
+AB != BA
+```
+
+For example:
+
+```text
+x^T : 1×2
+T   : 2×3
+y   : 3×1
+```
+
+Right first:
+
+```text
+Ty:        (2×3)(3×1) -> 2×1
+x^T(Ty):  (1×2)(2×1) -> 1×1
+```
+
+Left first:
+
+```text
+x^T T:    (1×2)(2×3) -> 1×3
+(x^T T)y: (1×3)(3×1) -> 1×1
+```
+
+### Why the dot product is bilinear
+
+Define:
+
+```text
+F(x, y) = x · y
+```
+
+It has two input slots. Holding one fixed, the other obeys linearity:
+
+```text
+F(a x1 + b x2, y) = a F(x1, y) + b F(x2, y)
+F(x, a y1 + b y2) = a F(x, y1) + b F(x, y2)
+```
+
+That is why it is **bi-linear**: each of the two slots is linear separately.
+
+### Why two input slots lead to two coordinate transforms
+
+Suppose:
+
+```text
+x = A x'
+y = B y'
+F(x,y) = x^T T y
+```
+
+Substitute:
+
+```text
+F = (A x')^T T (B y')
+  = x'^T A^T T B y'
+```
+
+So the new component matrix is:
+
+```text
+T' = A^T T B
+```
+
+One transformation comes from each input slot. Only when both slots use the same basis change does this become `A^T T A`.
+
+### Vector vs. covector
+
+A useful intuition:
+
+- **vector**: an arrow with direction and magnitude;
+- **covector**: a linear measuring rule that takes a vector and returns a scalar.
+
+Example:
+
+```text
+v = [3, 4]^T
+ω(v) = 2 v1 - v2
+ω = [2, -1]
+ω(v) = 2
+```
+
+Under a coordinate change, vector and covector components transform differently and compensate for one another so that the scalar measurement `ω(v)` remains unchanged. Upper and lower indices keep track of these different transformation behaviors.
+
+### `namedtuple` and Hugging Face model outputs
+
+A normal tuple is positional:
+
+```python
+x = ("cat", 0.97)
+x[0]
+x[1]
+```
+
+Python's `namedtuple` adds field names while retaining tuple-style indexing:
+
+```python
+from collections import namedtuple
+
+Result = namedtuple("Result", ["label", "score"])
+r = Result("cat", 0.97)
+
+r[0]       # "cat"
+r.label    # "cat"
+r.score    # 0.97
+```
+
+Hugging Face model outputs provide similar namedtuple-like / dictionary-like convenience, so you may commonly see:
+
+```python
+outputs.last_hidden_state
+outputs["last_hidden_state"]
+outputs[0]
+```
+
+Attribute or key access is usually preferable in readable code because it does not depend on remembering field order.
+
+---
+
 ## References
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
