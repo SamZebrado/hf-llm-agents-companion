@@ -633,6 +633,234 @@ outputs[0]
 
 ---
 
+
+## 25. Softmax、logit 与 0–1 参数重参数化
+
+Softmax 把一组任意实数分数变成非负、总和为 1 的权重：
+
+```text
+logits
+→ softmax
+→ probability distribution
+```
+
+例如：
+
+```text
+[2, 1, 0]
+→ softmax
+≈ [0.67, 0.24, 0.09]
+```
+
+深度学习里的 `logits` 通常指 softmax / sigmoid 前的原始预测分数。统计学里的严格 logit 是：
+
+```text
+logit(p) = log(p / (1-p))
+```
+
+其中 `p` 是概率，`p/(1-p)` 是 odds；inverse-logit 就是 sigmoid：
+
+```text
+p = 1 / (1 + exp(-z))
+```
+
+若模型参数必须满足 `0 < p < 1`，可以优化无界参数 `z`，再令 `p = sigmoid(z)`。这样优化器不必直接处理 0–1 边界。Bayesian fitting 需要额外注意 induced prior / Jacobian：给 `z` 设 prior 一般不等于直接给 `p` 设同样意义的 prior。
+
+---
+
+## 26. Padding、truncation 与 batch
+
+### Padding
+
+`padding=True` 默认把同一个 batch 里的独立样本 pad 到当前 batch 中最长的 sequence：
+
+```text
+A: 5 tokens  -> 8
+B: 8 tokens  -> 8
+C: 6 tokens  -> 8
+```
+
+于是可以形成矩形 tensor：
+
+```text
+input_ids.shape = [3, 8]
+```
+
+padding positions 的 attention mask 通常为 0。
+
+### Truncation
+
+`truncation=True` 会删除超过 `max_length` / model maximum 的 token。被删除内容不会变成特殊“截断 token”。
+
+对于 sequence pair，默认 `True` / `"longest_first"` 会逐 token 从较长的一侧删除；也可指定：
+
+```python
+truncation="only_first"
+truncation="only_second"
+```
+
+若需要保留超长内容，可用 chunking / sliding window，并结合 `return_overflowing_tokens=True` 与 `stride`。
+
+### Batch item vs. sentence pair
+
+```python
+tokenizer(["sentence A", "sentence B"], padding=True)
+```
+
+表示两个独立 batch items。它们分别受 sequence-length 限制；长度不会相加，self-attention 也不会跨 batch item。
+
+```python
+tokenizer(sentence_a, sentence_b)
+```
+
+则是一个 sequence pair。A、B 与 special tokens 共同占用一个 sequence-length budget，在允许跨段 self-attention 的 encoder 中可以互相影响。
+
+可记：
+
+```text
+sequence dimension 内：token 可互相 attention
+batch dimension 之间：独立样本不互相 attention
+```
+
+参考：[Hugging Face Padding and truncation](https://huggingface.co/docs/transformers/main/pad_truncation)
+
+---
+
+## 27. 中文在 GPT 类 tokenizer 中怎么切
+
+OpenAI 的开源 `tiktoken` 是 BPE tokenizer。当前公开 model mapping 中，GPT-4o、o-series 和 GPT-5 family 前缀使用 `o200k_base`。
+
+参考：[OpenAI tiktoken](https://github.com/openai/tiktoken) · [model mapping](https://github.com/openai/tiktoken/blob/main/tiktoken/model.py)
+
+中文通常不会按语言学意义上的偏旁、部首或拼音拆分。Byte-level BPE 更接近下面这个逻辑：
+
+- 高频单字可能成为一个 token；
+- 高频双字 / 多字字符串也可能被 merge 成一个 token；
+- 生僻字符或罕见组合可能拆成更细的 byte pieces；
+- 切法由 vocabulary 和 BPE merge table 决定，而不是由“词根 / 偏旁规则”直接决定。
+
+因此：
+
+```text
+清 / 情 / 晴 / 请 / 睛
+```
+
+不会因为都包含“青”就必然共享一个 `青` subtoken；
+
+```text
+在 / 再
+```
+
+也不会因为同音就自动共享 token。
+
+偏旁、读音、同音字和语义之间的关系主要在后续 embedding + Transformer training 中从上下文、字词共现、拼音/语音描述等数据里学习。若模型同时训练 audio modality，还可以从声音信号获得更直接的 phonetic information。
+
+更大的、多语言优化的 vocabulary 往往能让常见中文字符串用更少 token 表示，提高 context / cost efficiency；这不代表 tokenizer 已经显式理解汉字构形或语音学。
+
+---
+
+## 28. 一个模型为什么能同时处理多种语言
+
+现代多语言 LLM 可以粗略理解为：
+
+```text
+shared tokenizer
++ shared embedding / Transformer parameters
++ multilingual training data
+```
+
+不同语言先映射到同一个 token vocabulary。语义相近的词不需要共享 token；例如 `cat` 和“猫”可以是完全不同的 token IDs。
+
+所有 token 随后进入同一个 embedding table 和同一套 Transformer layers。模型不会为每种语言准备一套完全独立的网络。
+
+在多语言训练中，共享参数同时处理不同语言。平行语料、翻译样本、跨语言 QA / instructions 会提供直接的跨语言对应信号；大量普通多语言文本也能让 contextual representations 形成一定程度的语义对齐和 cross-lingual transfer。
+
+目标语言可以由 prompt / context 指定。较早的 multilingual NMT 还常用显式 target-language token，例如在输入前告诉模型“输出法语”。
+
+最终生成机制仍然相同：
+
+```text
+hidden state
+→ shared vocabulary logits
+→ next token
+```
+
+需要注意：OpenAI 公开了 `tiktoken` 等 tokenizer 工具，但 GPT 系列具体训练语料比例、跨语言 sampling 和专门的对齐目标并未完整公开，因此不应把这些未公开细节当作事实。
+
+---
+
+## 29. 机器翻译：从规则到统计、神经网络和 Transformer
+
+### Rule-Based Machine Translation
+
+早期机器翻译大量依赖双语词典、词法/句法分析和人工编写的语法、词序与形态变化规则：
+
+```text
+source
+→ dictionary + grammar rules
+→ structural transfer
+→ target
+```
+
+优点是可解释；缺点是规则维护成本高，对歧义、习语和新表达非常脆弱。
+
+### Statistical / Phrase-Based Machine Translation
+
+Google 官方回顾显示，2006 年上线的 Google Translate 使用 statistical machine translation，并长期以 Phrase-Based Machine Translation 为核心。
+
+系统从双语平行语料中估计短语翻译概率，再结合：
+
+- translation model
+- target-language model
+- reordering model
+- decoder / search
+
+在大量候选中选择综合得分更高的翻译。它并不是逐字查字典，而是可以翻译短语、调整语序并用统计语言模型判断目标句是否自然。
+
+参考：[Google Research — GNMT at production scale](https://research.google/blog/a-neural-network-for-machine-translation-at-production-scale/)
+
+### Neural Machine Translation
+
+2014 年前后，seq2seq NMT 开始成熟：
+
+```text
+source sentence
+→ encoder RNN / LSTM
+→ representation
+→ decoder RNN / LSTM
+→ target sentence
+```
+
+attention 进一步允许 decoder 在生成不同目标词时回看 source sequence 的不同位置。
+
+Google 在 2016 年开始把 Google Translate 大规模切换到 GNMT。Google 当时明确对比：旧 PBMT 更像处理词和短语，NMT 则把整句作为整体做端到端翻译。
+
+参考：[Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215) · [Google GNMT](https://research.google/blog/a-neural-network-for-machine-translation-at-production-scale/)
+
+### Multilingual NMT 和 zero-shot translation
+
+Google 2016 年展示了一个模型服务多个语言方向，并通过 target-language token 指定输出语言。共享参数带来 cross-lingual transfer，还出现了 zero-shot translation：某些语言对没有直接训练样本，模型仍能进行一定程度的直接翻译。
+
+参考：[Google Research — Zero-Shot Translation](https://research.google/blog/zero-shot-translation-with-googles-multilingual-neural-machine-translation-system/)
+
+### Transformer
+
+2017 年的 `Attention Is All You Need` 首先在机器翻译任务上证明 Transformer 的优势：去掉 RNN recurrence，用 attention-based encoder-decoder 提高建模能力和训练并行性。
+
+历史链条可以简记为：
+
+```text
+Rule-based MT
+→ Statistical / Phrase-Based MT
+→ RNN/LSTM seq2seq + attention
+→ Transformer NMT
+→ multilingual pretrained models / LLMs
+```
+
+参考：[Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+
+---
+
 ## 参考
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
