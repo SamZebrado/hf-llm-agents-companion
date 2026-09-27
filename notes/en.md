@@ -625,6 +625,166 @@ Attribute or key access is usually preferable in readable code because it does n
 
 ---
 
+
+## 25. Softmax, logit, and bounded-parameter reparameterization
+
+Softmax converts arbitrary real-valued scores into non-negative weights that sum to 1:
+
+```text
+logits
+→ softmax
+→ probability distribution
+```
+
+Example:
+
+```text
+[2, 1, 0]
+→ softmax
+≈ [0.67, 0.24, 0.09]
+```
+
+In deep learning, `logits` usually means raw prediction scores before softmax or sigmoid. The statistical logit is:
+
+```text
+logit(p) = log(p / (1-p))
+```
+
+where `p` is a probability and `p/(1-p)` is the odds. The inverse-logit is the sigmoid.
+
+If a fitted parameter must satisfy `0 < p < 1`, one common approach is to optimize an unconstrained `z` and set `p = sigmoid(z)`. In Bayesian fitting, remember that a prior on `z` induces a particular prior on `p`; parameter transformations can therefore require attention to the induced prior / Jacobian.
+
+---
+
+## 26. Padding, truncation, and batches
+
+With `padding=True`, independent samples in one batch are normally padded to the longest sequence in that batch. Padding positions usually receive attention-mask value 0.
+
+`truncation=True` deletes tokens beyond the allowed `max_length` / model maximum; it does not insert a special “truncation token.”
+
+For sequence pairs, the default `"longest_first"` strategy removes tokens from the longer side until the pair fits. `"only_first"` and `"only_second"` are also available.
+
+```python
+tokenizer(["sentence A", "sentence B"], padding=True)
+```
+
+means two independent batch items. Their lengths do not add together, and self-attention does not cross batch items.
+
+```python
+tokenizer(sentence_a, sentence_b)
+```
+
+creates one sequence pair, so A, B, and special tokens share the same sequence-length budget.
+
+A useful rule:
+
+```text
+within the sequence dimension: tokens may attend to each other
+across the batch dimension: independent samples do not
+```
+
+Reference: [Hugging Face Padding and truncation](https://huggingface.co/docs/transformers/main/pad_truncation)
+
+---
+
+## 27. How GPT-style tokenizers handle Chinese
+
+OpenAI's open-source `tiktoken` is a BPE tokenizer. In the current public model mapping, GPT-4o, o-series, and GPT-5 family prefixes use `o200k_base`.
+
+Chinese is not normally decomposed by radicals or pronunciation. Byte-level BPE instead learns reusable byte/string fragments:
+
+- frequent single characters may become tokens;
+- frequent multi-character strings may also become tokens;
+- rare characters or combinations can fall back to finer byte pieces;
+- segmentation is determined by the vocabulary and merge table, not by an explicit radical or pinyin grammar.
+
+So characters that share a component, or homophones that share a pronunciation, do not automatically share a token. Those relationships are mostly learned later through embeddings and Transformer training from context, co-occurrence, pinyin or phonetic descriptions, and—when available—audio data.
+
+Reference: [OpenAI tiktoken](https://github.com/openai/tiktoken)
+
+---
+
+## 28. How one model can process many languages
+
+A useful approximation for a modern multilingual LLM is:
+
+```text
+shared tokenizer
++ shared embeddings / Transformer parameters
++ multilingual training data
+```
+
+Different languages map into one vocabulary. Semantically related words do not need the same token ID: `cat` and Chinese “猫” can be completely different tokens.
+
+All tokens are then processed by the same embedding table and Transformer layers. Multilingual data, parallel translation examples, and cross-lingual instructions provide signals that encourage shared contextual representations and cross-lingual transfer.
+
+The desired output language can be inferred from the prompt or explicitly specified. Older multilingual NMT systems often used a target-language token.
+
+Generation itself is unchanged:
+
+```text
+hidden state
+→ shared-vocabulary logits
+→ next token
+```
+
+OpenAI publicly exposes tokenizer tooling such as `tiktoken`, but the exact language proportions and alignment objectives used to train proprietary GPT models are not fully public.
+
+---
+
+## 29. Machine translation before and after neural networks
+
+### Rule-based MT
+
+Early systems relied on bilingual dictionaries plus manually written morphology, grammar, and reordering rules.
+
+### Statistical / phrase-based MT
+
+Google has documented that Google Translate launched in 2006 using statistical machine translation and relied heavily on Phrase-Based Machine Translation.
+
+A typical SMT system combined:
+
+- translation probabilities;
+- a target-language model;
+- reordering features;
+- decoder/search over candidate translations.
+
+It translated phrases rather than simply doing word-for-word dictionary lookup.
+
+Reference: [Google Research — GNMT at production scale](https://research.google/blog/a-neural-network-for-machine-translation-at-production-scale/)
+
+### Neural MT
+
+Around 2014, seq2seq NMT used an encoder RNN/LSTM to represent the source and a decoder RNN/LSTM to generate the target. Attention later let the decoder consult different source positions during generation.
+
+Google began moving Google Translate to GNMT in 2016, treating the whole sentence as a neural translation problem rather than primarily combining phrase-level translation decisions.
+
+References: [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215) · [Google GNMT](https://research.google/blog/a-neural-network-for-machine-translation-at-production-scale/)
+
+### Multilingual NMT and zero-shot translation
+
+Google's 2016 multilingual NMT work showed that one model could serve multiple language directions using a target-language token, with shared parameters enabling cross-lingual transfer and some zero-shot translation.
+
+Reference: [Google Research — Zero-Shot Translation](https://research.google/blog/zero-shot-translation-with-googles-multilingual-neural-machine-translation-system/)
+
+### Transformer
+
+`Attention Is All You Need` (2017) demonstrated the Transformer first on machine translation, replacing recurrent sequence processing with an attention-based encoder-decoder that trained much more in parallel.
+
+A compact historical chain:
+
+```text
+Rule-based MT
+→ Statistical / Phrase-Based MT
+→ RNN/LSTM seq2seq + attention
+→ Transformer NMT
+→ multilingual pretrained models / LLMs
+```
+
+Reference: [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+
+---
+
 ## References
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
