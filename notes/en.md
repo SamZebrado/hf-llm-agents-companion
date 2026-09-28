@@ -785,6 +785,156 @@ Reference: [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
 
 ---
 
+
+## 30. Chapter 2 / 5 annotated: Handling multiple sequences
+
+Course section: [LLM Course Chapter 2 / 5](https://huggingface.co/learn/llm-course/chapter2/5)
+
+### Automatic tokenizer output
+
+```python
+tokenized_inputs = tokenizer(sequence, return_tensors="pt")
+print(tokenized_inputs["input_ids"])
+```
+
+The course currently shows:
+
+```text
+tensor([[  101,  1045,  1005,  2310,  2042,  3403,  2005,  1037,
+         17662, 12172,  2607,  2026,  2878,  2166,  1012,   102]])
+```
+
+Shape = `[1, 16]`: batch size 1, sequence length 16. The tokenizer has also added special tokens.
+
+### Manually adding a batch dimension
+
+```python
+input_ids = torch.tensor([ids])
+output = model(input_ids)
+```
+
+The manually built `ids` do not include the automatically added special tokens, so the shape is `[1, 14]`.
+
+Course logits:
+
+```text
+[[-2.7276, 2.8789]]
+```
+
+### Two identical sequences in one batch
+
+```python
+batched_ids = [ids, ids]
+```
+
+After conversion to a tensor, the shape is `[2, 14]`. The exercise expects the same logits twice:
+
+```text
+[[-2.7276, 2.8789],
+ [-2.7276, 2.8789]]
+```
+
+Batch items are independent; self-attention does not cross between them.
+
+### Why unequal lengths require padding
+
+```python
+batched_ids = [
+    [200, 200, 200],
+    [200, 200]
+]
+```
+
+The rows have different lengths, so they cannot form a normal rectangular tensor directly.
+
+The course first uses `padding_id = 100` as a conceptual placeholder:
+
+```text
+[
+  [200, 200, 200],
+  [200, 200, 100]
+]
+```
+
+A real model should use `tokenizer.pad_token_id`; for this DistilBERT checkpoint it is 0.
+
+### Padding without a mask changes the result
+
+The course shows:
+
+```text
+sequence 1 alone:
+tensor([[ 1.5694, -1.3895]])
+
+sequence 2 alone:
+tensor([[ 0.5803, -0.4125]])
+
+batched + padded, no attention mask:
+tensor([[ 1.5694, -1.3895],
+        [ 1.3373, -1.2163]])
+```
+
+The second sequence changes because the padding token is still included in attention.
+
+### Attention mask
+
+```python
+attention_mask = [
+    [1, 1, 1],
+    [1, 1, 0],
+]
+```
+
+Interpretation:
+
+```text
+1 = real token, attend to it
+0 = padding, ignore it
+```
+
+With the mask:
+
+```text
+tensor([[ 1.5694, -1.3895],
+        [ 0.5803, -0.4125]])
+```
+
+The padded second sequence now matches its standalone result.
+
+### A caution about the final truncation snippet
+
+The course ends with:
+
+```python
+sequence = sequence[:max_sequence_length]
+```
+
+This is plain Python slicing. If `sequence` is a string, it slices characters; if it is a token-ID list, it slices token IDs.
+
+For actual tokenizer-level truncation, the standard Transformers API is:
+
+```python
+encoded = tokenizer(
+    text,
+    truncation=True,
+    max_length=512,
+)
+```
+
+A compact causal chain for the page:
+
+```text
+batches need rectangular tensors
+→ unequal sequences need padding
+→ PAD tokens would otherwise enter attention
+→ attention masks hide PAD
+→ batched padded results match standalone results
+```
+
+Reference: [Transformers — Padding and truncation](https://huggingface.co/docs/transformers/main/pad_truncation)
+
+---
+
 ## References
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
