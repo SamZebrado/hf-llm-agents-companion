@@ -861,6 +861,158 @@ Rule-based MT
 
 ---
 
+
+## 30. Chapter 2 / 5 注释版：Handling multiple sequences
+
+对应课程：[LLM Course Chapter 2 / 5](https://huggingface.co/learn/llm-course/chapter2/5)
+
+### 自动 tokenizer 输出
+
+```python
+tokenized_inputs = tokenizer(sequence, return_tensors="pt")
+print(tokenized_inputs["input_ids"])
+```
+
+课程当前输出：
+
+```text
+tensor([[  101,  1045,  1005,  2310,  2042,  3403,  2005,  1037,
+         17662, 12172,  2607,  2026,  2878,  2166,  1012,   102]])
+```
+
+shape = `[1, 16]`：batch size 1，sequence length 16。这里 tokenizer 自动加入了 special tokens。
+
+### 手工加 batch dimension
+
+```python
+input_ids = torch.tensor([ids])
+output = model(input_ids)
+```
+
+手工 `ids` 不含自动 special tokens，因此 shape = `[1, 14]`。
+
+课程给出的 logits：
+
+```text
+[[-2.7276, 2.8789]]
+```
+
+### 两个相同 sequence 组成 batch
+
+```python
+batched_ids = [ids, ids]
+```
+
+转 tensor 后 shape = `[2, 14]`。课程 exercise 的预期是两行相同 logits：
+
+```text
+[[-2.7276, 2.8789],
+ [-2.7276, 2.8789]]
+```
+
+batch items 是独立样本，不会跨样本 self-attention。
+
+### 不等长 sequence 为什么要 padding
+
+```python
+batched_ids = [
+    [200, 200, 200],
+    [200, 200]
+]
+```
+
+两行长度不同，不能直接形成普通矩形 tensor。
+
+教材先用 `padding_id = 100` 演示概念：
+
+```python
+[
+    [200, 200, 200],
+    [200, 200, 100],
+]
+```
+
+真实模型应使用 `tokenizer.pad_token_id`；本页 DistilBERT checkpoint 的 padding ID 是 0。
+
+### 只 padding、不 mask 会改变结果
+
+课程输出：
+
+```text
+sequence 1 alone:
+tensor([[ 1.5694, -1.3895]])
+
+sequence 2 alone:
+tensor([[ 0.5803, -0.4125]])
+
+batched + padded, no attention mask:
+tensor([[ 1.5694, -1.3895],
+        [ 1.3373, -1.2163]])
+```
+
+第二条序列的 logits 变了，因为 padding token 也进入了 attention。
+
+### Attention mask
+
+```python
+attention_mask = [
+    [1, 1, 1],
+    [1, 1, 0],
+]
+```
+
+含义：
+
+```text
+1 = 真 token，要参与 attention
+0 = padding，要忽略
+```
+
+加入 mask 后：
+
+```text
+tensor([[ 1.5694, -1.3895],
+        [ 0.5803, -0.4125]])
+```
+
+于是 padded batch 中第二条序列又和单独运行时一致。
+
+### 本页最后的 truncation 代码
+
+课程最后写：
+
+```python
+sequence = sequence[:max_sequence_length]
+```
+
+这只是 Python slicing。若 `sequence` 是字符串，它截的是字符；若它是 token-ID list，才是在截 token IDs。
+
+实际使用 tokenizer 时，更标准的是：
+
+```python
+encoded = tokenizer(
+    text,
+    truncation=True,
+    max_length=512,
+)
+```
+
+官方 Transformers 文档定义的 truncation 是 token-level truncation。
+
+可以把整页因果链记成：
+
+```text
+batch 要做成矩形 tensor
+→ 不等长 sequence 要 padding
+→ PAD 也会被 attention 看见
+→ attention mask 屏蔽 PAD
+→ padded batch 与单独运行保持一致
+```
+
+参考：[Transformers — Padding and truncation](https://huggingface.co/docs/transformers/main/pad_truncation)
+
+---
+
 ## 参考
 
 - [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/)
