@@ -19,6 +19,12 @@ The Pages site renders the full notes directly and switches Chinese / English in
 - [中文 Markdown](notes/zh-CN.md)
 - [English Markdown](notes/en.md)
 
+## Reading-site limitations / 阅读页限制
+
+The site loads notes from the repository's current `main` branch and loads its Markdown renderer from an unversioned third-party CDN. It requires network access and is not a self-contained, revision-pinned offline artifact. Use the Markdown source at a specific Git commit when you need a reproducible reference.
+
+网页从仓库当前 `main` 分支加载笔记，并从第三方 CDN 加载未固定版本的 Markdown 渲染器。阅读页需要网络连接，并非可离线使用、绑定固定修订的独立成品。需要可复现的引用时，请使用特定 Git commit 下的 Markdown 源文件。
+
 ## Why this exists / 为什么做这份笔记
 
 It is useful in two ways: read it yourself, or give the page/repository to your own AI or agent as prepared context. The explanations, misconceptions, and worked examples are already organized, so a smaller or cheaper model can retrieve the relevant background before answering a follow-up question instead of reconstructing everything from scratch.
